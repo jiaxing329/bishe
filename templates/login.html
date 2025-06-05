@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>系统登录界面</title>
+   <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+
+    <script type="text/javascript" src="{{ url_for('static',filename='js/jquery.min.js') }}"></script>
+    <script src="/static/js/auth.js"></script>
+</head>
+<body>
+<!--背景-->
+<div class="wel" id="background-3"></div>
+<!--左右两边云-->
+<div class="wel" id="box">
+    <div class="box-1 lefp"></div>
+    <div class="box-1">
+        <div class="righp"></div>
+    </div>
+</div>
+<!--荧光点点-->
+<div class="wel" id="git"></div>
+<!--登录注册表-->
+<div class="wel" id="from">
+    <div class="box-2 le-1" id="denglu">
+        <form id="loginForm" onsubmit="return false;">
+            <div class="flrg">
+                    <h3>登录</h3>
+                <div class="a">
+                    <!--<label>账号：</label>-->
+                    <input type="text" class="in-1" placeholder="请输入账号" id="username">
+                </div>
+                <div class="a">
+                    <!--<label>密码：</label>-->
+                    <input type="password" class="in-1" placeholder="请输入密码" id="password">
+                </div>
+                <div class="a">
+                    <select class="in-1" id="role">
+                        <option value="admin">管理员</option>
+                        <option value="user">用户</option>
+                    </select>
+                </div>
+                <div class="a">
+                    <button type="submit" onclick="submitLogin()">登录</button>
+                </div>
+                <div class="a">
+                    <div class="hr"></div>
+                </div>
+{#                <div class="a">#}
+{#                    <a href="#" id="create">创建账号</a>#}
+{#                </div>#}
+            </div>
+        </form>
+    </div>
+    <div class="box-2 le-2" id="zhuce">
+        <form action="" method="post">
+            <div class="flrg-1">
+                <h3>注册</h3>
+                <div class="a">
+                    <input type="text" class="in-1" placeholder="您的用户名">
+                </div>
+                <div class="a">
+                    <input type="password" class="in-1" placeholder="输入密码">
+                </div>
+                <div class="a">
+                    <input type="password" class="in-1" placeholder="再次确认密码">
+                </div>
+                <div class="a">
+                    <input type="text" class="in-1" placeholder="输入手机号码">
+                </div>
+                <div class="a">
+                    <input type="email" class="in-1" placeholder="输入邮箱地址">
+                </div>
+                <div class="a">
+                    <button type="button">注册</button>
+{#                    <button type="button" id="fanhui">返回登录</button>#}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>
+
+<script>
+$(function(){
+     $("#login").click(function(){
+        var username=$("#username").val();
+        var password=$("#password").val();
+        var role = $('#role').val();
+        var dataJ=JSON.stringify({'username':username,'password':password,'role':role});
+        console.log(dataJ);
+        $.ajax({
+                    url: '/user/loginApi', // 请求的 URL
+                    method: 'Post', // 请求方法，如 GET、POST 等
+                    dataType: 'json', // 预期的服务器响应数据类型
+                    data:dataJ,
+                    contentType: 'application/json',
+                    success: function (response) {
+                        // 请求成功时的回调函数
+                         console.log(response);
+                         if(response.data.role==="管理员"){
+                             window.location.href = '/Home?name='+response.data.nickname;
+                         }else{
+
+                         }
+                    },
+                    error: function (xhr, status, error) {
+                        // 请求失败时的回调函数
+                         console.logt('Error: ' + error);
+                    }
+                });
+     })
+
+})
+
+function submitLogin() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    handleLogin(username, password)
+        .then(() => {
+            // 登录成功后跳转到首页
+            window.location.href = '/';
+        })
+        .catch(error => {
+            alert(error.message);
+        });
+}
+</script>

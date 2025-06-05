@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% block title %}个性化推荐{% endblock %}
+
+<style>
+.recommendation-card {
+    transition: transform 0.3s;
+}
+
+.recommendation-card:hover {
+    transform: translateY(-5px);
+}
+
+.music-cover {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.recommendation-score {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(47, 76, 221, 0.9);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+/* 操作按钮样式 */
+.music-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.music-actions .btn {
+    flex: 1;
+    padding: 6px 12px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.music-actions .btn i {
+    margin-right: 4px;
+}
+
+.btn-like.liked {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+/* 统计数据样式 */
+.music-stats {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+    color: #666;
+    font-size: 12px;
+}
+
+.music-stats span {
+    display: flex;
+    align-items: center;
+}
+
+.music-stats i {
+    margin-right: 4px;
+}
+
+/* 添加加载动画样式 */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* 添加无数据提示样式 */
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+</style>
+
+<div class="container-fluid">
+    <div class="row page-titles mx-0">
+        <div class="col-sm-6 p-md-0">
+            <div class="welcome-text">
+                <h4>个性化推荐</h4>
+                <span>为您推荐可能喜欢的音乐</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row" id="recommendationList">
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="fa fa-refresh fa-spin fa-2x mb-3"></i><br>
+                正在为您生成个性化推荐...
+            </div>
+        </div>
+    </div>
+    
+    <div class="loading-overlay" id="loading" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">加载中...</span>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// 页面加载时自动获取推荐
+document.addEventListener('DOMContentLoaded', function() {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (!userInfo || !userInfo.id) {
+        showMessage('warning', '请先登录后查看个性化推荐');
+        return;
+    }
+    loadRecommendations(userInfo.id);
+});
+
+function loadRecommendations(userId) {
+    const loading = document.getElementById('loading');
+    const recommendationList = document.getElementById('recommendationList');
+    
+    loading.style.display = 'block';
+    recommendationList.innerHTML = '';
+    
+    fetch(`/music/recommendations/${userId}`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        loading.style.display = 'none';
+        
+        if (data.code === 200) {
+            if (!data.data || data.data.length === 0) {
+                showMessage('info', '暂无推荐内容，快去评论一些音乐来获取个性化推荐吧！');
+                return;
+            }
+            
+            let html = '<div class="row">';
+            data.data.forEach(music => {
+                html += generateMusicCard(music);
+            });
+            html += '</div>';
+            recommendationList.innerHTML = html;
+        } else {
+            showMessage('error', data.msg || '获取推荐失败');
+        }
+    })
+    .catch(error => {
+        loading.style.display = 'none';
+        showMessage('error', `加载失败：${error.message}`);
+        console.error('Error:', error);
+    });
+}
+
+function generateMusicCard(music) {
+    const releaseDate = music.release_date ? new Date(music.release_date).toLocaleDateString() : '未知';
+    return `
+        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+            <div class="card recommendation-card h-100">
+                <img src="${music.image_url || '/static/images/default-cover.jpg'}" 
+                     class="card-img-top music-cover" 
+                     alt="${music.music_name}"
+                     onerror="this.src='/static/images/default-cover.jpg'">
+                <div class="card-body">
+                    <h5 class="card-title text-truncate" title="${music.music_name}">${music.music_name}</h5>
+                    <p class="card-text text-muted mb-1 text-truncate" title="${music.singer}">
+                        <i class="fa fa-user-o"></i> ${music.singer}
+                    </p>
+                    <p class="card-text text-muted mb-2 small">
+                        <span class="mr-2" title="语种"><i class="fa fa-language"></i> ${music.languages || '未知'}</span>
+                        <span title="流派"><i class="fa fa-music"></i> ${music.school || '未知'}</span>
+                    </p>
+                    <div class="music-stats">
+                        <span title="播放次数"><i class="fa fa-play"></i>${music.play_count}</span>
+                        <span title="下载次数"><i class="fa fa-download"></i>${music.download_count}</span>
+                        <span title="点赞数"><i class="fa fa-heart"></i>${music.like_count}</span>
+                    </div>
+                    <div class="music-actions">
+                        <button class="btn btn-primary btn-sm" onclick="playMusic(${music.id}, '${music.music_url}')">
+                            <i class="fa fa-play"></i>播放
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="downloadMusic(${music.id}, '${music.music_url}')">
+                            <i class="fa fa-download"></i>下载
+                        </button>
+                        <button class="btn btn-warning btn-sm ${isLiked(music.id) ? 'liked' : ''}" 
+                                onclick="toggleLike(${music.id})">
+                            <i class="fa fa-heart"></i>${isLiked(music.id) ? '已赞' : '点赞'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function showMessage(type, message) {
+    const alertClass = {
+        'success': 'alert-success',
+        'warning': 'alert-warning',
+        'error': 'alert-danger',
+        'info': 'alert-info'
+    }[type] || 'alert-info';
+    
+    const icon = {
+        'success': 'check-circle',
+        'warning': 'exclamation-circle',
+        'error': 'times-circle',
+        'info': 'info-circle'
+    }[type] || 'info-circle';
+    
+    document.getElementById('recommendationList').innerHTML = `
+        <div class="col-12">
+            <div class="alert ${alertClass} text-center">
+                <i class="fa fa-${icon} fa-2x mb-3"></i><br>
+                ${message}
+            </div>
+        </div>
+    `;
+}
+
+// 检查音乐是否已点赞
+function isLiked(musicId) {
+    const likedMusic = JSON.parse(localStorage.getItem('likedMusic') || '[]');
+    return likedMusic.includes(musicId);
+}
+
+// 播放音乐
+function playMusic(musicId, musicUrl) {
+    if (!musicUrl) {
+        alert('音乐链接不存在');
+        return;
+    }
+    
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (!userInfo || !userInfo.id) {
+        alert('请先登录');
+        return;
+    }
+    
+    fetch(`/music/play/${musicId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            // 添加播放历史
+            fetch('/api/add_play_history', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: userInfo.id,
+                    music_id: musicId
+                })
+            })
+            .then(response => response.json())
+            .then(historyData => {
+                if (historyData.code !== 200) {
+                    console.error('添加播放历史失败:', historyData.msg);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+
+            window.open(musicUrl, '_blank');
+            loadRecommendations(userInfo.id);  // 刷新列表以更新播放次数
+        } else {
+            alert('播放失败：' + data.msg);
+        }
+    })
+    .catch(error => {
+        console.error('播放错误:', error);
+        alert('播放出错，请稍后再试');
+    });
+}
+
+// 下载音乐
+function downloadMusic(musicId, musicUrl) {
+    if (!musicUrl) {
+        alert('下载链接不存在');
+        return;
+    }
+    
+    fetch(`/music/download/${musicId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            // 创建一个临时链接来下载文件
+            const link = document.createElement('a');
+            link.href = musicUrl;
+            link.download = '';  // 使用默认文件名
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            loadRecommendations(data.userId);  // 刷新列表以更新下载次数
+        } else {
+            alert('下载失败：' + data.msg);
+        }
+    })
+    .catch(error => {
+        console.error('下载错误:', error);
+        alert('下载出错，请稍后再试');
+    });
+}
+
+// 点赞/取消点赞
+function toggleLike(musicId) {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (!userInfo || !userInfo.id) {
+        alert('请先登录');
+        return;
+    }
+    
+    const likedMusic = JSON.parse(localStorage.getItem('likedMusic') || '[]');
+    const isLiked = likedMusic.includes(musicId);
+    
+    fetch(`/music/like/${musicId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            user_id: userInfo.id,
+            action: isLiked ? 'unlike' : 'like'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            if (isLiked) {
+                const index = likedMusic.indexOf(musicId);
+                if (index > -1) {
+                    likedMusic.splice(index, 1);
+                }
+            } else {
+                likedMusic.push(musicId);
+            }
+            localStorage.setItem('likedMusic', JSON.stringify(likedMusic));
+            
+            loadRecommendations(data.userId);  // 刷新列表以更新点赞状态
+        } else if (data.code === 401) {
+            alert('请先登录');
+            localStorage.removeItem('likedMusic');
+        } else {
+            alert(data.msg);
+        }
+    })
+    .catch(error => {
+        console.error('点赞错误:', error);
+        alert('操作失败，请稍后再试');
+    });
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row page-titles mx-0">
+        <div class="col-sm-6 p-md-0">
+            <div class="welcome-text">
+                <h4>个人信息</h4>
+                <span>查看和编辑个人信息</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form id="profileForm">
+                        <input type="hidden" id="userId">
+                        <div class="row">
+                            <!-- 基本信息 -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>用户名</label>
+                                    <input type="text" class="form-control" id="username" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>昵称</label>
+                                    <input type="text" class="form-control" id="nickname">
+                                </div>
+                                <div class="form-group">
+                                    <label>性别</label>
+                                    <select class="form-control" id="sex">
+                                        <option value="男">男</option>
+                                        <option value="女">女</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>年龄</label>
+                                    <input type="number" class="form-control" id="age">
+                                </div>
+                            </div>
+                            <!-- 联系方式 -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>手机号码</label>
+                                    <input type="tel" class="form-control" id="phone">
+                                </div>
+                                <div class="form-group">
+                                    <label>电子邮箱</label>
+                                    <input type="email" class="form-control" id="email">
+                                </div>
+                                <div class="form-group">
+                                    <label>出生日期</label>
+                                    <input type="date" class="form-control" id="birthday">
+                                </div>
+                                <div class="form-group">
+                                    <label>身份证号</label>
+                                    <input type="text" class="form-control" id="card">
+                                </div>
+                            </div>
+                            <!-- 其他信息 -->
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label>个人简介</label>
+                                    <textarea class="form-control" id="content" rows="3"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>备注</label>
+                                    <textarea class="form-control" id="remarks" rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="button" class="btn btn-primary" onclick="saveProfile()">保存修改</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 提示框容器 -->
+<div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 1050;"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// 页面加载完成后获取用户信息
+document.addEventListener('DOMContentLoaded', function() {
+    loadProfile();
+});
+
+// 加载个人信息
+function loadProfile() {
+    // 从 localStorage 获取用户信息
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (!userInfo || !userInfo.id) {
+        showToast('error', '未找到用户信息，请重新登录');
+        setTimeout(() => {
+            window.location.href = '/';  // 重定向到登录页
+        }, 2000);
+        return;
+    }
+    
+    fetch(`/user/profile?id=${userInfo.id}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            fillProfileForm(data.data);
+        } else {
+            showToast('error', '获取个人信息失败：' + data.msg);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('error', '获取数据时发生错误');
+    });
+}
+
+// 填充表单
+function fillProfileForm(profile) {
+    document.getElementById('userId').value = profile.id;
+    document.getElementById('username').value = profile.username;
+    document.getElementById('nickname').value = profile.nickname || '';
+    document.getElementById('sex').value = profile.sex ;
+    document.getElementById('age').value = profile.age || '';
+    document.getElementById('phone').value = profile.phone || '';
+    document.getElementById('email').value = profile.email || '';
+    document.getElementById('birthday').value = profile.birthday || '';
+    document.getElementById('card').value = profile.card || '';
+    document.getElementById('content').value = profile.content || '';
+    document.getElementById('remarks').value = profile.remarks || '';
+}
+
+// 保存个人信息
+function saveProfile() {
+    const age = document.getElementById('age').value;
+    
+    // 验证年龄
+    if (age && !isNaN(age)) {
+        if (parseInt(age) < 0 || parseInt(age) > 150) {
+            showToast('error', '请输入有效的年龄（0-150岁）');
+            return;
+        }
+    }
+
+    const profileData = {
+        id: document.getElementById('userId').value,
+        nickname: document.getElementById('nickname').value,
+        sex: document.getElementById('sex').value,
+        age: age || null,  // 如果为空则传 null
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        birthday: document.getElementById('birthday').value,
+        card: document.getElementById('card').value,
+        content: document.getElementById('content').value,
+        remarks: document.getElementById('remarks').value
+    };
+
+    // 显示确认对话框
+    if (!confirm('确定要保存修改吗？')) {
+        return;
+    }
+
+    fetch('/user/updateProfile', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(profileData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            showToast('success', '保存成功');
+            loadProfile(); // 重新加载数据
+        } else {
+            showToast('error', '保存失败：' + data.msg);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('error', '保存数据时发生错误');
+    });
+}
+
+// 显示提示框
+function showToast(type, message) {
+    const toastHTML = `
+        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-delay="3000">
+            <div class="toast-header bg-${type === 'success' ? 'success' : 'danger'} text-white">
+                <strong class="mr-auto">${type === 'success' ? '成功' : '错误'}</strong>
+                <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="toast-body">
+                ${message}
+            </div>
+        </div>
+    `;
+
+    const toastContainer = document.getElementById('toast-container');
+    const toastElement = document.createElement('div');
+    toastElement.innerHTML = toastHTML;
+    toastContainer.appendChild(toastElement.firstElementChild);
+    $('.toast').toast('show');
+}
+</script>
+{% endblock %} 
