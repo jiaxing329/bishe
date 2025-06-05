@@ -1,0 +1,13 @@
+flask
+flask_cors
+pymysql
+matplotlib
+wordcloud 
+sqlalchemy
+pandas
+scikit-learn
+Pillow
+jieba
+tensorflow
+DrissionPage
+pyspark
