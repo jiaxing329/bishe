@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="form-head d-flex mb-0 mb-lg-4 align-items-start">
+        <div class="mr-auto d-none d-lg-block">
+            <h2 class="text-black font-w600 mb-1">音乐播放器</h2>
+            <p class="mb-0">在线音乐播放与控制</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 播放器卡片 -->
+        <div class="col-xl-4 col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="music-player text-center">
+                        <div class="music-info mb-4">
+                            <div class="cover mb-3">
+                                <img src="https://via.placeholder.com/200" alt="音乐封面" class="rounded-circle">
+                            </div>
+                            <div class="song-details">
+                                <h4 id="song-title" class="mb-2">选择歌曲播放</h4>
+                                <p id="artist" class="text-muted">未知艺术家</p>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-container mb-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span id="current-time">00:00</span>
+                                <span id="duration">00:00</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div id="progress-bar" class="progress-bar bg-primary" role="progressbar"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="controls">
+                            <button id="prev" class="btn btn-primary btn-circle mr-2">
+                                <i class="fa fa-step-backward"></i>
+                            </button>
+                            <button id="play-pause" class="btn btn-primary btn-circle btn-lg mr-2">
+                                <i class="fa fa-play"></i>
+                            </button>
+                            <button id="next" class="btn btn-primary btn-circle">
+                                <i class="fa fa-step-forward"></i>
+                            </button>
+                        </div>
+                        
+                        <audio id="audio-player"></audio>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 播放列表卡片 -->
+        <div class="col-xl-8 col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">播放列表</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">序号</th>
+                                    <th>歌曲名称</th>
+                                    <th>艺术家</th>
+                                    <th>时长</th>
+                                    <th>大小</th>
+                                    <th style="width: 100px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="songList">
+                                <!-- 数据将通过JavaScript动态加载 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+.music-player .cover img {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-circle {
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    line-height: 40px;
+    text-align: center;
+}
+
+.btn-circle.btn-lg {
+    width: 50px;
+    height: 50px;
+    line-height: 50px;
+}
+
+.progress {
+    cursor: pointer;
+    background-color: #eee;
+}
+
+.table tr.playing {
+    background-color: rgba(47, 76, 221, 0.1);
+}
+</style>
+
+<script>
+let songs = [];
+let currentSongIndex = -1;
+const audioPlayer = document.getElementById('audio-player');
+const playPauseBtn = document.getElementById('play-pause');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+const progressBar = document.getElementById('progress-bar');
+const currentTimeSpan = document.getElementById('current-time');
+const durationSpan = document.getElementById('duration');
+
+// 格式化时间
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// 更新进度条
+audioPlayer.addEventListener('timeupdate', () => {
+    const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+    progressBar.style.width = `${progress}%`;
+    currentTimeSpan.textContent = formatTime(audioPlayer.currentTime);
+});
+
+// 点击进度条跳转
+document.querySelector('.progress').addEventListener('click', (e) => {
+    const percent = e.offsetX / e.target.offsetWidth;
+    audioPlayer.currentTime = percent * audioPlayer.duration;
+});
+
+// 播放/暂停切换
+playPauseBtn.addEventListener('click', () => {
+    if (audioPlayer.paused) {
+        audioPlayer.play();
+        playPauseBtn.innerHTML = '<i class="fa fa-pause"></i>';
+    } else {
+        audioPlayer.pause();
+        playPauseBtn.innerHTML = '<i class="fa fa-play"></i>';
+    }
+});
+
+// 加载歌曲
+function loadSong(index) {
+    if (index >= 0 && index < songs.length) {
+        currentSongIndex = index;
+        const song = songs[currentSongIndex];
+        
+        document.getElementById('song-title').textContent = song.title;
+        document.getElementById('artist').textContent = song.artist;
+        audioPlayer.src = song.file_path;
+        
+        audioPlayer.load();
+        audioPlayer.play();
+        playPauseBtn.innerHTML = '<i class="fa fa-pause"></i>';
+        
+        // 更新播放列表状态
+        updatePlaylist();
+        
+        // 加载完成后显示总时长
+        audioPlayer.onloadedmetadata = () => {
+            durationSpan.textContent = formatTime(audioPlayer.duration);
+        };
+    }
+}
+
+// 更新播放列表
+function updatePlaylist() {
+    const songList = document.getElementById('songList');
+    songList.innerHTML = songs.map((song, index) => `
+        <tr class="${index === currentSongIndex ? 'playing' : ''}">
+            <td>${index + 1}</td>
+            <td>${song.title}</td>
+            <td>${song.artist}</td>
+            <td>${song.duration}</td>
+            <td>${song.file_size}</td>
+            <td>
+                <button class="btn btn-${index === currentSongIndex ? 'info' : 'primary'} btn-sm" 
+                        onclick="loadSong(${index})">
+                    <i class="fa fa-${index === currentSongIndex ? 'volume-up' : 'play'}"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// 上一首/下一首
+prevBtn.addEventListener('click', () => {
+    if (songs.length > 0) {
+        let newIndex = currentSongIndex - 1;
+        if (newIndex < 0) newIndex = songs.length - 1;
+        loadSong(newIndex);
+    }
+});
+
+nextBtn.addEventListener('click', () => {
+    if (songs.length > 0) {
+        let newIndex = currentSongIndex + 1;
+        if (newIndex >= songs.length) newIndex = 0;
+        loadSong(newIndex);
+    }
+});
+
+// 自动播放下一首
+audioPlayer.addEventListener('ended', () => {
+    let newIndex = currentSongIndex + 1;
+    if (newIndex >= songs.length) newIndex = 0;
+    loadSong(newIndex);
+});
+
+// 获取音乐列表数据
+function loadSongList() {
+    fetch('/api/songs')
+        .then(response => response.json())
+        .then(data => {
+            songs = data;
+            updatePlaylist();
+        })
+        .catch(error => {
+            console.error('获取音乐列表失败:', error);
+            document.getElementById('songList').innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted">
+                        加载数据失败，请刷新页面重试
+                    </td>
+                </tr>
+            `;
+        });
+}
+
+// 页面加载完成后获取数据
+document.addEventListener('DOMContentLoaded', loadSongList);
+</script>
+{% endblock %}

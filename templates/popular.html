@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}流行音乐{% endblock %}
+
+{% block styles %}
+<style nonce="{{ range(1000, 9999) | random }}">
+.recommendation-card {
+    transition: transform 0.3s;
+}
+
+.recommendation-card:hover {
+    transform: translateY(-5px);
+}
+
+.music-cover {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.recommendation-score {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(47, 76, 221, 0.9);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+/* 添加加载动画样式 */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* 添加无数据提示样式 */
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.filter-section {
+    background: white;
+    border-radius: 10px;
+    padding: 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+}
+
+.filter-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1.2rem;
+    position: relative;
+    padding-left: 1rem;
+}
+
+.filter-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 16px;
+    background: #4299e1;
+    border-radius: 2px;
+}
+
+.filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-bottom: 2rem;
+    padding: 0.5rem;
+}
+
+.filter-btn {
+    padding: 0.5rem 1.5rem;
+    border-radius: 25px;
+    background: #edf2f7 !important;
+    color: #2d3748 !important;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.filter-btn:hover {
+    background: #e2e8f0 !important;
+    transform: translateY(-1px);
+}
+
+.filter-btn.active {
+    background: linear-gradient(45deg, #3b82f6, #60a5fa) !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+}
+
+.filter-btn.active:hover {
+    background: linear-gradient(45deg, #2563eb, #3b82f6) !important;
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+}
+
+.filter-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.filter-btn:hover::before {
+    opacity: 1;
+}
+
+.music-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem;
+    margin: 0 auto;
+    max-width: 1200px;
+}
+
+.music-card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.music-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+}
+
+.music-image {
+    width: 100%;
+    object-fit: cover;
+    height: 200px;
+    border-radius: 10px 10px 0 0;
+}
+
+.music-info {
+    padding: 1rem;
+    background: white;
+}
+
+.music-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.music-singer {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.music-meta {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 0.8rem;
+    gap: 1rem;
+}
+
+.music-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.music-tags {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.8rem !important;
+    flex-wrap: wrap;
+}
+
+.music-tag {
+    padding: 0.3rem 0.6rem;
+    background: #f0f2f5 !important;
+    color: #666 !important;
+    font-size: 0.8rem;
+    border-radius: 15px;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+/* 响应式布局调整 */
+@media (max-width: 768px) {
+    .music-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1rem;
+    }
+    
+    .music-image {
+        height: 160px;
+    }
+    
+    .music-info {
+        padding: 0.6rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="row page-titles mx-0">
+        <div class="col-sm-6 p-md-0">
+            <div class="welcome-text">
+                <h4>流行音乐</h4>
+                <span>发现最热门的音乐</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选区域 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="filter-title">音乐类型</div>
+                    <div class="filter-group languages-filter">
+                        <span class="filter-btn active" data-type="">全部</span>
+                        {% for lang in categories.languages %}
+                        <span class="filter-btn" data-type="languages:{{ lang.value }}">
+                            {{ lang.value }}
+                        </span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="filter-title">音乐流派</div>
+                    <div class="filter-group school-filter">
+                        <span class="filter-btn active" data-type="">全部</span>
+                        {% for school in categories.school %}
+                        <span class="filter-btn" data-type="school:{{ school.value }}">
+                            {{ school.value }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 音乐列表 -->
+    <div class="row" id="musicList">
+        {% for music in popular_music %}
+        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+            <div class="card recommendation-card">
+                <div class="position-relative">
+                    <img src="{{ music.image_url }}" class="music-cover" alt="{{ music.music_name }}">
+                    <div class="recommendation-score">
+                        热度 {{ music.score }}%
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ music.music_name }}</h5>
+                    <p class="card-text text-muted">{{ music.singer }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            {{ music.languages }} · {{ music.school }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 加载动画 -->
+    <div class="loading-overlay" id="loading" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">加载中...</span>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentType = '';
+    
+    function updateMusicList() {
+        const musicList = document.getElementById('musicList');
+        const loading = document.getElementById('loading');
+        loading.style.display = 'block';
+        musicList.innerHTML = '';
+        
+        fetch(`/api/popular?type=${currentType}`)
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                musicList.innerHTML = data.map(music => `
+                    <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+                        <div class="card recommendation-card">
+                            <div class="position-relative">
+                                <img src="${music.image_url}" class="music-cover" alt="${music.music_name}">
+                                <div class="recommendation-score">
+                                    热度 ${music.score}%
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">${music.music_name}</h5>
+                                <p class="card-text text-muted">${music.singer}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        ${music.languages} · ${music.school}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                musicList.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger text-center">
+                            <i class="fa fa-times-circle fa-2x mb-3"></i><br>
+                            加载失败：${error}
+                        </div>
+                    </div>
+                `;
+                console.error('Error:', error);
+            });
+    }
+    
+    // 分类筛选事件
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const parent = this.parentElement;
+            parent.querySelector('.active').classList.remove('active');
+            this.classList.add('active');
+            currentType = this.dataset.type || '';
+            updateMusicList();
+        });
+    });
+});
+</script>
+{% endblock %} 

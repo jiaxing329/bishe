@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row page-titles mx-0">
+        <div class="col-sm-6 p-md-0">
+            <div class="welcome-text">
+                <h4>管理员管理</h4>
+                <span>管理员信息列表</span>
+            </div>
+        </div>
+        <div class="col-sm-6 p-md-0 justify-content-sm-end mt-2 mt-sm-0 d-flex">
+            <button class="btn btn-primary" onclick="showAddModal()">添加管理员</button>
+        </div>
+    </div>
+
+    <!-- 添加搜索区域 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="form-row align-items-center">
+                        <div class="col-auto">
+                            <label class="sr-only" for="searchUsername">用户名</label>
+                            <input type="text" class="form-control mb-2" id="searchUsername" placeholder="请输入用户名">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary mb-2" onclick="searchUsers()">搜索</button>
+                            <button class="btn btn-secondary mb-2 ml-2" onclick="resetSearch()">重置</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="userTable" class="table table-striped table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>用户名</th>
+                                    <th>昵称</th>
+                                    <th>性别</th>
+                                    <th>年龄</th>
+                                    <th>电话</th>
+                                    <th>邮箱</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTableBody">
+                                <!-- 用户数据将通过JavaScript动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑用户模态框 -->
+<div class="modal fade" id="userModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">添加管理员</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <input type="hidden" id="userId">
+                    <div class="form-group">
+                        <label for="username">用户名</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">密码</label>
+                        <input type="password" class="form-control" id="password">
+                        <small class="form-text text-muted">编辑时如不修改密码请留空</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="nickname">昵称</label>
+                        <input type="text" class="form-control" id="nickname">
+                    </div>
+                    <div class="form-group">
+                        <label for="sex">性别</label>
+                        <select class="form-control" id="sex">
+                            <option value="男">男</option>
+                            <option value="女">女</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="age">年龄</label>
+                        <input type="number" class="form-control" id="age">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">电话</label>
+                        <input type="tel" class="form-control" id="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">邮箱</label>
+                        <input type="email" class="form-control" id="email">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveUser()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let isEdit = false;
+let currentUsername = ''; // 添加搜索关键字变量
+
+// 页面加载完成后获取用户列表
+document.addEventListener('DOMContentLoaded', function() {
+    loadUsers();
+});
+
+// 搜索用户
+function searchUsers() {
+    currentUsername = document.getElementById('searchUsername').value.trim();
+    loadUsers();
+}
+
+// 重置搜索
+function resetSearch() {
+    document.getElementById('searchUsername').value = '';
+    currentUsername = '';
+    loadUsers();
+}
+
+// 修改加载用户列表函数
+function loadUsers() {
+    fetch('/user/adminlist', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            username: currentUsername, // 使用搜索关键字
+            page: 1,
+            limit: 20
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = '';
+            if (data.data.length === 0) {
+                // 如果没有数据，显示提示信息
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center">暂无数据</td>
+                    </tr>
+                `;
+            } else {
+                data.data.forEach(user => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.username}</td>
+                            <td>${user.nickname || '-'}</td>
+                            <td>${user.sex || '-'}</td>
+                            <td>${user.age || '-'}</td>
+                            <td>${user.phone || '-'}</td>
+                            <td>${user.email || '-'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="editUser(${user.id})">编辑</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">删除</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } else {
+            alert('获取用户列表失败：' + data.msg);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 显示添加用户模态框
+function showAddModal() {
+    isEdit = false;
+    document.getElementById('modalTitle').textContent = '添加用户';
+    document.getElementById('userForm').reset();
+    document.getElementById('userId').value = '';
+    document.getElementById('password').required = true;
+    $('#userModal').modal('show');
+}
+
+// 编辑用户
+function editUser(id) {
+    isEdit = true;
+    document.getElementById('modalTitle').textContent = '编辑管理员';
+    document.getElementById('userId').value = id;
+    document.getElementById('password').required = false;
+    
+    // 获取用户详情并填充表单
+    fetch(`/user/adminlist`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            username: '', // 这里不需要搜索条件
+            page: 1,
+            limit: 100
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            const user = data.data.find(u => u.id === id);
+            if (user) {
+                document.getElementById('username').value = user.username;
+                document.getElementById('password').value = ''; // 密码不回显
+                document.getElementById('nickname').value = user.nickname || '';
+                document.getElementById('sex').value = user.sex || '男';
+                document.getElementById('age').value = user.age || '';
+                document.getElementById('phone').value = user.phone || '';
+                document.getElementById('email').value = user.email || '';
+                $('#userModal').modal('show');
+            } else {
+                alert('未找到用户信息');
+            }
+        } else {
+            alert('获取用户信息失败：' + data.msg);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 保存用户
+function saveUser() {
+    const userId = document.getElementById('userId').value;
+    const userData = {
+        id: userId,
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value,
+        nickname: document.getElementById('nickname').value,
+        sex: document.getElementById('sex').value,
+        age: document.getElementById('age').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value
+    };
+    
+    const url = isEdit ? '/user/edit' : '/user/addadmin';
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            $('#userModal').modal('hide');
+            loadUsers();
+            alert(isEdit ? '更新成功' : '添加成功');
+        } else {
+            alert((isEdit ? '更新' : '添加') + '失败：' + data.msg);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 删除用户
+function deleteUser(id) {
+    if (confirm('确定要删除这个用户吗？')) {
+        fetch(`/user/delete/${id}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 200) {
+                loadUsers();
+                alert('删除成功');
+            } else {
+                alert('删除失败：' + data.msg);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+</script>
+{% endblock %} 

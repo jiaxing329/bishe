@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>用户注册</title>
+    <!-- Favicon icon -->
+    <link href="static/css/style.css" rel="stylesheet">
+</head>
+
+<body class="h-100" style="background-image: url('/static/image/login-bg.jpg'); background-size: cover; background-position: center;">
+    <div class="authincation h-100">
+        <div class="container h-100">
+            <div class="row justify-content-center h-100 align-items-center">
+                <div class="col-md-6">
+                    <div class="authincation-content">
+                        <div class="row no-gutters">
+                            <div class="col-xl-12">
+                                <div class="auth-form">
+                                    <h4 class="text-center mb-4">注册账号</h4>
+                                    <form id="registerForm" onsubmit="return handleRegister(event)">
+                                        <div class="form-group">
+                                            <label class="mb-1"><strong>用户名</strong></label>
+                                            <input type="text" class="form-control" id="username" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="mb-1"><strong>密码</strong></label>
+                                            <input type="password" class="form-control" id="password" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="mb-1"><strong>重复密码</strong></label>
+                                            <input type="password" class="form-control" id="confirmPassword" required>
+                                        </div>
+                                        <div class="text-center mt-4">
+                                            <button type="submit" class="btn btn-primary btn-block">立即注册</button>
+                                        </div>
+                                    </form>
+                                    <div class="new-account mt-3">
+                                        <p>你已经有账号了? <a class="text-primary" href="/">登录</a></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--**********************************
+        Scripts
+    ***********************************-->
+    <!-- Required vendors -->
+    <script src="static/js/global.min.js"></script>
+    <script src="static/js/bootstrap-select.min.js"></script>
+    <script src="static/js/custom.min.js"></script>
+    <script src="static/js/deznav-init.js"></script>
+
+    <script>
+        function handleRegister(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // 表单验证
+            if (!username || !password || !confirmPassword) {
+                alert('请填写所有必填字段');
+                return false;
+            }
+            
+            if (password !== confirmPassword) {
+                alert('两次输入的密码不一致');
+                return false;
+            }
+            
+            // 发送注册请求
+            fetch('/user/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert('注册成功！');
+                    window.location.href = '/'; // 注册成功后跳转到登录页
+                } else {
+                    alert(data.msg || '注册失败，请重试');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('注册失败，请重试');
+            });
+            
+            return false;
+        }
+    </script>
+
+</body>
+</html>

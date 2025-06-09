@@ -1,0 +1,1228 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.btn-group .btn {
+    margin: 0 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+}
+
+.btn-group .btn i {
+    font-size: 14px;
+}
+
+.btn-group .btn .badge {
+    margin-left: 3px;
+    padding: 3px 5px;
+    font-size: 10px;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+/* 鼠标悬停效果 */
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    transition: all 0.2s;
+}
+
+/* 按钮点击效果 */
+.btn-group .btn:active {
+    transform: translateY(1px);
+    box-shadow: none;
+}
+
+/* 表格行悬停效果 */
+.table tbody tr:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+
+/* 按钮图标与文字的间距 */
+.btn-group .btn i + span {
+    margin-left: 4px;
+}
+
+/* 点赞按钮样式 */
+.btn-warning.liked {
+    background-color: #dc3545;  /* 已点赞状态使用红色背景 */
+    border-color: #dc3545;
+    color: white;
+}
+
+.btn-warning.liked i {
+    color: white;
+}
+
+.btn-warning.liked:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+/* 评论框样式 */
+#commentContent {
+    resize: none;
+    border-radius: 4px 0 0 4px;
+}
+
+.input-group-append .btn {
+    border-radius: 0 4px 4px 0;
+    height: 100%;
+}
+
+/* 评论列表样式 */
+.table td {
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* 情感标签样式 */
+.badge {
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.badge-success {
+    background-color: #28a745;  /* 非常积极 - 深绿色 */
+}
+
+.badge-info {
+    background-color: #17a2b8;  /* 积极 - 浅蓝色 */
+}
+
+.badge-warning {
+    background-color: #ffc107;  /* 消极 - 黄色 */
+    color: #000;
+}
+
+.badge-danger {
+    background-color: #dc3545;  /* 非常消极 - 红色 */
+}
+
+.badge-secondary {
+    background-color: #6c757d;  /* 中性 - 灰色 */
+}
+</style>
+<div class="container-fluid" style="width: 130%;">
+    <div class="row page-titles mx-0">
+        <div class="col-sm-6 p-md-0">
+            <div class="welcome-text">
+                <h4>音乐管理</h4>
+                <span>音乐信息列表</span>
+            </div>
+        </div>
+        <div class="col-sm-6 p-md-0 justify-content-sm-end mt-2 mt-sm-0 d-flex">
+            <button class="btn btn-primary" id="add" onclick="showAddModal()">添加音乐</button>
+        </div>
+    </div>
+
+    <!-- 搜索区域 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="form-row align-items-center">
+                        <div class="col-auto">
+                            <label class="sr-only" for="searchMusicName">音乐名称</label>
+                            <input type="text" class="form-control mb-2" id="searchMusicName" placeholder="请输入音乐名称">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary mb-2" onclick="searchMusic()">搜索</button>
+                            <button class="btn btn-secondary mb-2 ml-2" onclick="resetSearch()">重置</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 音乐列表 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive" >
+                        <table id="musicTable" class="table table-striped table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>音乐名称</th>
+                                    <th>歌手</th>
+                                    <th>语种</th>
+                                    <th>流派</th>
+                                    <th>唱片公司</th>
+                                    <th>发行日期</th>
+                                    <th>播放量</th>
+                                    <th>点赞数</th>
+                                    <th>下载量</th>
+                                    <th>评论数</th>
+                                    <th width="280">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="musicTableBody">
+                                <!-- 音乐数据将通过JavaScript动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 在表格下方添加分页组件 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            共 <span id="totalCount">0</span> 条记录
+                        </div>
+                        <div class="dataTables_paginate paging_simple_numbers">
+                            <ul class="pagination" id="pagination">
+                                <!-- 分页按钮将通过JavaScript动态填充 -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑音乐模态框 -->
+<div class="modal fade" id="musicModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">添加音乐</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="musicForm">
+                    <input type="hidden" id="musicId">
+                    <div class="row">
+                        <!-- 第一列 -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="music_name">音乐名称</label>
+                                <input type="text" class="form-control" id="music_name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="singer">歌手</label>
+                                <input type="text" class="form-control" id="singer" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="languages">语种</label>
+                                <input type="text" class="form-control" id="languages">
+                            </div>
+                            <div class="form-group">
+                                <label for="school">流派</label>
+                                <input type="text" class="form-control" id="school">
+                            </div>
+                        </div>
+                        <!-- 第二列 -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="record_company">唱片公司</label>
+                                <input type="text" class="form-control" id="record_company">
+                            </div>
+                            <div class="form-group">
+                                <label for="release_date">发行日期</label>
+                                <input type="date" class="form-control" id="release_date">
+                            </div>
+                            <div class="form-group">
+                                <label for="music_url">音乐链接</label>
+                                <input type="text" class="form-control" id="music_url">
+                            </div>
+                            <div class="form-group">
+                                <label for="image_url">封面图片链接</label>
+                                <input type="text" class="form-control" id="image_url">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveMusic()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 在文件末尾添加评论模态框 -->
+<div class="modal fade" id="commentsModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="commentsModalTitle">评论列表</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 添加评论输入区域 -->
+                <div class="form-group mb-4">
+                    <label for="commentContent">添加评论</label>
+                    <div class="input-group">
+                        <textarea class="form-control" id="commentContent" rows="2" placeholder="请输入评论内容..."></textarea>
+                        <div class="input-group-append">
+                            <button class="btn btn-primary" onclick="submitComment()">发表评论</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 现有的评论列表 -->
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>情感</th>
+                                <th>评论内容</th>
+                                <th>评论时间</th>
+                                <th>点赞数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="commentsTableBody">
+                            <!-- 评论数据将通过JavaScript动态填充 -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- 评论分页 -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        共 <span id="commentsTotalCount">0</span> 条评论
+                    </div>
+                    <div class="dataTables_paginate paging_simple_numbers">
+                        <ul class="pagination" id="commentsPagination">
+                            <!-- 评论分页按钮将通过JavaScript动态填充 -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加词云图模态框 -->
+<div class="modal fade" id="wordCloudModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="wordCloudTitle">评论词云图</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="wordCloudLoading" class="d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">生成中...</span>
+                    </div>
+                    <p class="mt-2">正在生成词云图，请稍候...</p>
+                </div>
+                <div id="wordCloudContainer">
+                    <img id="wordCloudImage" class="img-fluid" alt="词云图" style="max-width: 100%; display: none;">
+                </div>
+                <div id="wordCloudError" class="alert alert-danger d-none" role="alert">
+                    生成词云图时发生错误
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="downloadWordCloud()">下载词云图</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加详情模态框 -->
+<div class="modal fade" id="detailsModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">音乐详情</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <img id="detailImage" src="" alt="音乐封面" class="img-fluid rounded" style="max-width: 200px;">
+                    </div>
+                    <div class="col-md-8">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <th width="30%">音乐名称</th>
+                                    <td id="detailMusicName"></td>
+                                </tr>
+                                <tr>
+                                    <th>歌手</th>
+                                    <td id="detailSinger"></td>
+                                </tr>
+                                <tr>
+                                    <th>语种</th>
+                                    <td id="detailLanguages"></td>
+                                </tr>
+                                <tr>
+                                    <th>流派</th>
+                                    <td id="detailSchool"></td>
+                                </tr>
+                                <tr>
+                                    <th>唱片公司</th>
+                                    <td id="detailRecordCompany"></td>
+                                </tr>
+                                <tr>
+                                    <th>发行日期</th>
+                                    <td id="detailReleaseDate"></td>
+                                </tr>
+                                <tr>
+                                    <th>播放量</th>
+                                    <td id="detailPlayCount"></td>
+                                </tr>
+                                <tr>
+                                    <th>点赞数</th>
+                                    <td id="detailLikeCount"></td>
+                                </tr>
+                                <tr>
+                                    <th>下载量</th>
+                                    <td id="detailDownloadCount"></td>
+                                </tr>
+                                <tr>
+                                    <th>评论数</th>
+                                    <td id="detailCommentCount"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let isEdit = false;
+let currentMusicName = '';
+
+// 添加分页相关变量
+let currentPage = 1;
+let pageSize = 10;
+let totalPages = 0;
+let totalCount = 0;
+
+// 在 script 标签中添加评论相关变量和函数
+let currentMusicId = null;
+let commentsCurrentPage = 1;
+let commentsPageSize = 10;
+let commentsTotalPages = 0;
+let commentsTotalCount = 0;
+
+// 页面加载完成后获取音乐列表
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserLikes();
+    loadMusic();
+});
+
+// 搜索音乐
+function searchMusic() {
+    currentMusicName = document.getElementById('searchMusicName').value.trim();
+    currentPage = 1; // 重置到第一页
+    loadMusic();
+}
+
+// 重置搜索
+function resetSearch() {
+    document.getElementById('searchMusicName').value = '';
+    currentMusicName = '';
+    currentPage = 1; // 重置到第一页
+    loadMusic();
+}
+
+// 加载音乐列表
+function loadMusic() {
+    fetch('/music/musiclist', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            music_name: currentMusicName,
+            page: currentPage,
+            limit: pageSize
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            const tbody = document.getElementById('musicTableBody');
+            tbody.innerHTML = '';
+            
+            // 获取已点赞的音乐列表
+            const likedMusic = JSON.parse(localStorage.getItem('likedMusic') || '[]');
+            
+            // 更新总数和分页信息
+            totalCount = data.total;
+            document.getElementById('totalCount').textContent = totalCount;
+            totalPages = Math.ceil(totalCount / pageSize);
+            
+            if (data.data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="12" class="text-center">暂无数据</td>
+                    </tr>
+                `;
+            } else {
+                data.data.forEach(music => {
+                    const isLiked = likedMusic.includes(music.id);
+                    if(JSON.parse(localStorage.getItem('userInfo')).role == 'admin'){
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${music.id}</td>
+                            <td>${music.music_name}</td>
+                            <td>${music.singer}</td>
+                            <td>${music.languages}</td>
+                            <td>${music.school}</td>
+                            <td>${music.record_company}</td>
+                            <td>${music.release_date}</td>
+                            <td>${music.play_count}</td>
+                            <td>${music.like_count}</td>
+                            <td>${music.download_count}</td>
+                            <td>${music.comment_count}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-success" onclick="playMusic(${music.id}, '${music.music_url}')" title="播放">
+                                        <i class="fa fa-play"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-info" onclick="downloadMusic(${music.id})" title="下载">
+                                        <i class="fa fa-download"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning ${isLiked ? 'liked' : ''}" 
+                                        onclick="toggleLike(${music.id})" 
+                                        title="${isLiked ? '取消点赞' : '点赞'}">
+                                        <i class="fa fa-heart"></i>
+                                        <span class="badge badge-light">${music.like_count}</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-info" onclick="editMusic(${music.id})" title="编辑">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteMusic(${music.id})" title="删除">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success" onclick="viewComments(${music.id}, '${music.music_name}')" title="查看评论">
+                                        <i class="fa fa-comments"></i>
+                                        <span class="badge badge-light">${music.comment_count}</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" onclick="generateWordCloud(${music.id}, '${music.music_name}')" title="生成词云">
+                                        <i class="fa fa-cloud"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-info" onclick="showDetails(${music.id})" title="查看详情">
+                                        <i class="fa fa-info-circle"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;}
+                    else{
+                        document.getElementById('add').style.display='none'
+                        tbody.innerHTML += `
+                        <tr>
+                            <td>${music.id}</td>
+                            <td>${music.music_name}</td>
+                            <td>${music.singer}</td>
+                            <td>${music.languages}</td>
+                            <td>${music.school}</td>
+                            <td>${music.record_company}</td>
+                            <td>${music.release_date}</td>
+                            <td>${music.play_count}</td>
+                            <td>${music.like_count}</td>
+                            <td>${music.download_count}</td>
+                            <td>${music.comment_count}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-success" onclick="playMusic(${music.id}, '${music.music_url}')" title="播放">
+                                        <i class="fa fa-play"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-info" onclick="downloadMusic(${music.id})" title="下载">
+                                        <i class="fa fa-download"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning ${isLiked ? 'liked' : ''}" 
+                                        onclick="toggleLike(${music.id})" 
+                                        title="${isLiked ? '取消点赞' : '点赞'}">
+                                        <i class="fa fa-heart"></i>
+                                        <span class="badge badge-light">${music.like_count}</span>
+                                    </button>
+                               
+                                    <button class="btn btn-sm btn-success" onclick="viewComments(${music.id}, '${music.music_name}')" title="查看评论">
+                                        <i class="fa fa-comments"></i>
+                                        <span class="badge badge-light">${music.comment_count}</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" onclick="generateWordCloud(${music.id}, '${music.music_name}')" title="生成词云">
+                                        <i class="fa fa-cloud"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-info" onclick="showDetails(${music.id})" title="查看详情">
+                                        <i class="fa fa-info-circle"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    }
+                });
+            }
+            
+            // 更新分页按钮
+            updatePagination();
+        } else {
+            alert('获取音乐列表失败：' + data.msg);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 显示添加音乐模态框
+function showAddModal() {
+    isEdit = false;
+    document.getElementById('modalTitle').textContent = '添加音乐';
+    document.getElementById('musicForm').reset();
+    document.getElementById('musicId').value = '';
+    $('#musicModal').modal('show');
+}
+
+// 编辑音乐
+function editMusic(id) {
+    isEdit = true;
+    document.getElementById('modalTitle').textContent = '编辑音乐';
+    document.getElementById('musicId').value = id;
+    
+    fetch(`/music/musiclist`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            music_name: '',
+            page: 1,
+            limit: 100
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            const music = data.data.find(m => m.id === id);
+            if (music) {
+                document.getElementById('music_name').value = music.music_name;
+                document.getElementById('singer').value = music.singer || '';
+                document.getElementById('languages').value = music.languages || '';
+                document.getElementById('school').value = music.school || '';
+                document.getElementById('record_company').value = music.record_company || '';
+                document.getElementById('release_date').value = music.release_date || '';
+                document.getElementById('music_url').value = music.music_url || '';
+                document.getElementById('image_url').value = music.image_url || '';
+                $('#musicModal').modal('show');
+            } else {
+                alert('未找到音乐信息');
+            }
+        } else {
+            alert('获取音乐信息失败：' + data.msg);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 保存音乐
+function saveMusic() {
+    const musicId = document.getElementById('musicId').value;
+    const musicData = {
+        id: musicId,
+        music_name: document.getElementById('music_name').value,
+        singer: document.getElementById('singer').value,
+        languages: document.getElementById('languages').value,
+        school: document.getElementById('school').value,
+        record_company: document.getElementById('record_company').value,
+        release_date: document.getElementById('release_date').value,
+        music_url: document.getElementById('music_url').value,
+        image_url: document.getElementById('image_url').value
+    };
+    
+    const url = isEdit ? '/music/edit' : '/music/add';
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(musicData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            $('#musicModal').modal('hide');
+            currentPage = 1; // 重置到第一页
+            loadMusic();
+            alert(isEdit ? '更新成功' : '添加成功');
+        } else {
+            alert((isEdit ? '更新' : '添加') + '失败：' + data.msg);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 删除音乐
+function deleteMusic(id) {
+    if (confirm('确定要删除这首音乐吗？这将同时删除相关的评论数据。')) {
+        fetch(`/music/deleteMusic/${id}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 200) {
+                // 如果当前页只有一条数据且不是第一页，则跳转到上一页
+                if (document.querySelectorAll('#musicTableBody tr').length === 1 && currentPage > 1) {
+                    currentPage--;
+                }
+                loadMusic();
+                alert('删除成功');
+            } else {
+                alert('删除失败：' + data.msg);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+
+// 添加分页按钮更新函数
+function updatePagination() {
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
+    
+    // 上一页按钮
+    pagination.innerHTML += `
+        <li class="paginate_button page-item previous ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="javascript:void(0)" onclick="changePage(${currentPage - 1})">上一页</a>
+        </li>
+    `;
+    
+    // 页码按钮
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        pagination.innerHTML += `
+            <li class="paginate_button page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="javascript:void(0)" onclick="changePage(${i})">${i}</a>
+            </li>
+        `;
+    }
+    
+    // 下一页按钮
+    pagination.innerHTML += `
+        <li class="paginate_button page-item next ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="javascript:void(0)" onclick="changePage(${currentPage + 1})">下一页</a>
+        </li>
+    `;
+}
+
+// 添加页码切换函数
+function changePage(page) {
+    if (page < 1 || page > totalPages || page === currentPage) {
+        return;
+    }
+    currentPage = page;
+    loadMusic();
+}
+
+// 查看评论
+function viewComments(musicId, musicName) {
+    currentMusicId = musicId;
+    commentsCurrentPage = 1;
+    document.getElementById('commentsModalTitle').textContent = `${musicName} - 评论列表`;
+    document.getElementById('commentContent').value = ''; // 清空评论框
+    loadComments();
+    $('#commentsModal').modal('show');
+}
+
+// 加载评论列表
+function loadComments() {
+    fetch(`/music/comments/${currentMusicId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            page: commentsCurrentPage,
+            limit: commentsPageSize
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const tbody = document.getElementById('commentsTableBody');
+        
+        // 始终清空现有内容
+        tbody.innerHTML = '';
+        
+        if (data.code === 200) {
+            // 更新总数和分页信息
+            commentsTotalCount = data.total;
+            document.getElementById('commentsTotalCount').textContent = commentsTotalCount;
+            commentsTotalPages = Math.ceil(commentsTotalCount / commentsPageSize);
+            
+            if (!data.data || data.data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center">暂无评论</td>
+                    </tr>
+                `;
+            } else {
+                data.data.forEach(comment => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>
+                                <span class="badge badge-${getSentimentClass(comment.sentiment)}">
+                                    ${comment.sentiment || '中性'}
+                                </span>
+                            </td>
+                            <td>${comment.comment_content || ''}</td>
+                            <td>${comment.comment_time || ''}</td>
+                            <td>${comment.like_count || 0}</td>
+                            <td>
+                                ${JSON.parse(localStorage.getItem('userInfo')).role === 'admin' ? 
+                                    `<button class="btn btn-sm btn-danger" onclick="deleteComment(${comment.id}, ${currentMusicId})">
+                                        <i class="fa fa-trash"></i>
+                                    </button>` : 
+                                    ''
+                                }
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+            
+            // 更新评论分页按钮
+            updateCommentsPagination();
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center text-danger">
+                        获取评论失败：${data.msg}
+                    </td>
+                </tr>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('commentsTableBody').innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-danger">
+                    加载评论时发生错误，请稍后重试
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// 更新评论分页按钮
+function updateCommentsPagination() {
+    const pagination = document.getElementById('commentsPagination');
+    pagination.innerHTML = '';
+    
+    // 上一页按钮
+    pagination.innerHTML += `
+        <li class="paginate_button page-item previous ${commentsCurrentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="javascript:void(0)" onclick="changeCommentsPage(${commentsCurrentPage - 1})">上一页</a>
+        </li>
+    `;
+    
+    // 页码按钮
+    let startPage = Math.max(1, commentsCurrentPage - 2);
+    let endPage = Math.min(commentsTotalPages, startPage + 4);
+    
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        pagination.innerHTML += `
+            <li class="paginate_button page-item ${i === commentsCurrentPage ? 'active' : ''}">
+                <a class="page-link" href="javascript:void(0)" onclick="changeCommentsPage(${i})">${i}</a>
+            </li>
+        `;
+    }
+    
+    // 下一页按钮
+    pagination.innerHTML += `
+        <li class="paginate_button page-item next ${commentsCurrentPage === commentsTotalPages ? 'disabled' : ''}">
+            <a class="page-link" href="javascript:void(0)" onclick="changeCommentsPage(${commentsCurrentPage + 1})">下一页</a>
+        </li>
+    `;
+}
+
+// 切换评论页码
+function changeCommentsPage(page) {
+    if (page < 1 || page > commentsTotalPages || page === commentsCurrentPage) {
+        return;
+    }
+    commentsCurrentPage = page;
+    loadComments();
+}
+
+// 生成词云图
+function generateWordCloud(musicId, musicName) {
+    // 显示模态框
+    $('#wordCloudModal').modal('show');
+    document.getElementById('wordCloudTitle').textContent = `${musicName} - 评论词云图`;
+    
+    // 显示加载状态
+    document.getElementById('wordCloudLoading').classList.remove('d-none');
+    document.getElementById('wordCloudImage').style.display = 'none';
+    document.getElementById('wordCloudError').classList.add('d-none');
+    
+    // 请求生成词云图
+    fetch(`/music/wordcloud/${musicId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            // 显示词云图
+            const wordCloudImage = document.getElementById('wordCloudImage');
+            wordCloudImage.src = data.image_url;
+            wordCloudImage.style.display = 'block';
+            document.getElementById('wordCloudLoading').classList.add('d-none');
+        } else {
+            throw new Error(data.msg);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('wordCloudLoading').classList.add('d-none');
+        const errorDiv = document.getElementById('wordCloudError');
+        errorDiv.textContent = `生成词云图失败: ${error.message}`;
+        errorDiv.classList.remove('d-none');
+    });
+}
+
+// 下载词云图
+function downloadWordCloud() {
+    const image = document.getElementById('wordCloudImage');
+    if (image.style.display === 'none') {
+        alert('请等待词云图生成完成');
+        return;
+    }
+    
+    // 创建一个临时链接来下载图片
+    const link = document.createElement('a');
+    link.href = image.src;
+    link.download = `wordcloud_${currentMusicId}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 播放音乐
+function playMusic(musicId, musicUrl) {
+    if (!musicUrl) {
+        alert('该音乐暂无播放链接');
+        return;
+    }
+    
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (!userInfo || !userInfo.id) {
+        alert('请先登录');
+        return;
+    }
+    
+    // 增加播放次数
+    fetch(`/music/play/${musicId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            // 添加播放历史
+            fetch('/api/add_play_history', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: userInfo.id,
+                    music_id: musicId
+                })
+            })
+            .then(response => response.json())
+            .then(historyData => {
+                if (historyData.code !== 200) {
+                    console.error('添加播放历史失败:', historyData.msg);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+
+            // 跳转到音乐链接
+            window.open(musicUrl, '_blank');
+            // 刷新列表以更新播放次数
+            loadMusic();
+        } else {
+            alert('播放失败：' + data.msg);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 下载音乐
+function downloadMusic(musicId) {
+    fetch(`/music/download/${musicId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            alert('下载次数已更新');
+            // 刷新列表以更新下载次数
+            loadMusic();
+        } else {
+            alert('操作失败：' + data.msg);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 获取用户点赞列表
+function loadUserLikes() {
+    // 从本地存储获取用户信息
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (!userInfo || !userInfo.id) {
+        localStorage.removeItem('likedMusic');
+        return;
+    }
+    
+    fetch('/music/user/likes', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            user_id: userInfo.id
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            localStorage.setItem('likedMusic', JSON.stringify(data.data));
+        } else if (data.code === 401) {
+            localStorage.removeItem('likedMusic');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 修改点赞函数
+function toggleLike(musicId) {
+    // 从本地存储获取用户信息
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (!userInfo || !userInfo.id) {
+        alert('请先登录');
+        return;
+    }
+    
+    const likedMusic = JSON.parse(localStorage.getItem('likedMusic') || '[]');
+    const isLiked = likedMusic.includes(musicId);
+    
+    fetch(`/music/like/${musicId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            user_id: userInfo.id,
+            action: isLiked ? 'unlike' : 'like'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            // 更新本地存储的点赞列表
+            const likedMusic = JSON.parse(localStorage.getItem('likedMusic') || '[]');
+            if (isLiked) {
+                // 取消点赞，从列表中移除
+                const index = likedMusic.indexOf(musicId);
+                if (index > -1) {
+                    likedMusic.splice(index, 1);
+                }
+            } else {
+                // 点赞，添加到列表
+                likedMusic.push(musicId);
+            }
+            localStorage.setItem('likedMusic', JSON.stringify(likedMusic));
+            
+            // 更新UI
+            alert(data.msg);
+            loadMusic();
+        } else if (data.code === 401) {
+            alert('请先登录');
+            localStorage.removeItem('likedMusic');
+        } else {
+            alert(data.msg);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 提交评论
+function submitComment() {
+    // 从本地存储获取用户信息
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    if (!userInfo || !userInfo.id) {
+        alert('请先登录');
+        return;
+    }
+    
+    const content = document.getElementById('commentContent').value.trim();
+    if (!content) {
+        alert('请输入评论内容');
+        return;
+    }
+    
+    fetch(`/music/comment/${currentMusicId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            user_id: userInfo.id,
+            content: content
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            // 清空输入框
+            document.getElementById('commentContent').value = '';
+            // 重新加载评论列表
+            loadComments();
+            // 重新加载音乐列表以更新评论数
+            loadMusic();
+            alert('评论成功');
+        } else if (data.code === 401) {
+            alert('请先登录');
+        } else {
+            alert(data.msg);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 添加评论框的回车提交功能
+document.getElementById('commentContent').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitComment();
+    }
+});
+
+// 添加情感判断辅助函数
+function getSentimentClass(sentiment) {
+    if (!sentiment) return 'secondary';
+    sentiment = sentiment.toLowerCase();
+    
+    if (sentiment.includes('非常积极')) return 'success';
+    if (sentiment.includes('积极')) return 'info';
+    if (sentiment.includes('非常消极')) return 'danger';
+    if (sentiment.includes('消极')) return 'warning';
+    return 'secondary';
+}
+
+// 添加删除评论的函数
+function deleteComment(commentId, musicId) {
+    if (!confirm('确定要删除这条评论吗？')) {
+        return;
+    }
+    
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    
+    fetch(`/music/delete_comment/${commentId}/${musicId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            role: userInfo.role
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            alert('删除成功');
+            loadComments(); // 重新加载评论列表
+            loadMusic();   // 重新加载音乐列表以更新评论数
+        } else {
+            alert(data.msg);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('删除失败，请重试');
+    });
+}
+
+// 添加显示详情的函数
+function showDetails(musicId) {
+    fetch(`/music/musiclist`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            music_name: '',
+            page: 1,
+            limit: 100
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            const music = data.data.find(m => m.id === musicId);
+            if (music) {
+                // 更新模态框中的信息
+                document.getElementById('detailImage').src = music.image_url || '/static/images/default-music.png';
+                document.getElementById('detailMusicName').textContent = music.music_name || '暂无';
+                document.getElementById('detailSinger').textContent = music.singer || '暂无';
+                document.getElementById('detailLanguages').textContent = music.languages || '暂无';
+                document.getElementById('detailSchool').textContent = music.school || '暂无';
+                document.getElementById('detailRecordCompany').textContent = music.record_company || '暂无';
+                document.getElementById('detailReleaseDate').textContent = music.release_date || '暂无';
+                document.getElementById('detailPlayCount').textContent = music.play_count || '0';
+                document.getElementById('detailLikeCount').textContent = music.like_count || '0';
+                document.getElementById('detailDownloadCount').textContent = music.download_count || '0';
+                document.getElementById('detailCommentCount').textContent = music.comment_count || '0';
+                
+                // 显示模态框
+                $('#detailsModal').modal('show');
+            } else {
+                alert('未找到音乐信息');
+            }
+        } else {
+            alert('获取音乐信息失败：' + data.msg);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('获取音乐信息时发生错误');
+    });
+}
+</script>
+{% endblock %}

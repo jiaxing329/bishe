@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}错误提示{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row page-titles mx-0">
+        <div class="col-sm-6 p-md-0">
+            <div class="welcome-text">
+                <h4>错误提示</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="alert alert-danger" role="alert">
+                        {{ message }}
+                    </div>
+                    <div class="text-center mt-4">
+                        <a href="javascript:history.back()" class="btn btn-primary">返回上一页</a>
+                        <a href="/" class="btn btn-secondary ml-2">返回首页</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

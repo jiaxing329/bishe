@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.card {
+    margin-bottom: 1.5rem;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.stat-card .number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #2f4cdd;
+}
+
+.stat-card .label {
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+.stat-card i {
+    font-size: 2.5rem;
+    color: #2f4cdd;
+    margin-bottom: 1rem;
+}
+</style>
+
+<div class="container-fluid">
+    <!-- 页面标题 -->
+    <div class="row page-titles mx-0">
+        <div class="col-sm-6 p-md-0">
+            <div class="welcome-text">
+                <h4>数据分析</h4>
+                <span>音乐数据统计与分析</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row">
+        <div class="col-xl-3 col-lg-6 col-sm-6">
+            <div class="card">
+                <div class="stat-card">
+                    <i class="fa fa-music"></i>
+                    <div class="number" id="totalMusic">0</div>
+                    <div class="label">音乐总数</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-sm-6">
+            <div class="card">
+                <div class="stat-card">
+                    <i class="fa fa-play"></i>
+                    <div class="number" id="totalPlays">0</div>
+                    <div class="label">总播放量</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-sm-6">
+            <div class="card">
+                <div class="stat-card">
+                    <i class="fa fa-heart"></i>
+                    <div class="number" id="totalLikes">0</div>
+                    <div class="label">总点赞数</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-sm-6">
+            <div class="card">
+                <div class="stat-card">
+                    <i class="fa fa-comments"></i>
+                    <div class="number" id="totalComments">0</div>
+                    <div class="label">总评论数</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图表区域 -->
+    <div class="row">
+        <!-- 语种分布 -->
+        <div class="col-xl-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">语种分布</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="languagesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 流派分布 -->
+        <div class="col-xl-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">流派分布</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="schoolChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 热门音乐排行 -->
+        <div class="col-xl-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">热门音乐 TOP 10</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="topMusicChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 发行趋势 -->
+        <div class="col-xl-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">音乐发行趋势</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="releaseTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// 页面加载完成后获取数据
+document.addEventListener('DOMContentLoaded', function() {
+    loadAnalysisData();
+});
+
+// 加载分析数据
+function loadAnalysisData() {
+    fetch('/music/analysis', {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.code === 200) {
+            // 更新统计数字
+            updateStats(data.stats);
+            // 更新图表
+            createLanguagesChart(data.languages);
+            createSchoolChart(data.schools);
+            createTopMusicChart(data.topMusic);
+            createReleaseTrendChart(data.releaseTrend);
+        } else {
+            alert('获取数据失败：' + data.msg);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// 更新统计数字
+function updateStats(stats) {
+    document.getElementById('totalMusic').textContent = stats.totalMusic;
+    document.getElementById('totalPlays').textContent = stats.totalPlays;
+    document.getElementById('totalLikes').textContent = stats.totalLikes;
+    document.getElementById('totalComments').textContent = stats.totalComments;
+}
+
+// 创建语种分布图表
+function createLanguagesChart(data) {
+    new Chart(document.getElementById('languagesChart'), {
+        type: 'pie',
+        data: {
+            labels: data.map(item => item.language),
+            datasets: [{
+                data: data.map(item => item.count),
+                backgroundColor: [
+                    '#2f4cdd', '#f72b50', '#2bc155', '#ff6d4d',
+                    '#886cc0', '#26e7a6', '#ff9f00', '#3065d0'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+}
+
+// 创建流派分布图表
+function createSchoolChart(data) {
+    new Chart(document.getElementById('schoolChart'), {
+        type: 'doughnut',
+        data: {
+            labels: data.map(item => item.school),
+            datasets: [{
+                data: data.map(item => item.count),
+                backgroundColor: [
+                    '#2f4cdd', '#f72b50', '#2bc155', '#ff6d4d',
+                    '#886cc0', '#26e7a6', '#ff9f00', '#3065d0'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+}
+
+// 创建热门音乐排行图表
+function createTopMusicChart(data) {
+    new Chart(document.getElementById('topMusicChart'), {
+        type: 'bar',
+        data: {
+            labels: data.map(item => item.music_name),
+            datasets: [{
+                label: '播放量',
+                data: data.map(item => item.play_count),
+                backgroundColor: '#2f4cdd'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// 创建发行趋势图表
+function createReleaseTrendChart(data) {
+    new Chart(document.getElementById('releaseTrendChart'), {
+        type: 'line',
+        data: {
+            labels: data.map(item => item.month),
+            datasets: [{
+                label: '发行数量',
+                data: data.map(item => item.count),
+                borderColor: '#2f4cdd',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %} 
